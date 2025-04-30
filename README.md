@@ -1,197 +1,194 @@
--- LiL Hub for Blox Fruits Script
--- Based on RedZ Hub with modifications
+local ui = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/turtle"))()
 
--- GUI
-local Gui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local FarmButton = Instance.new("TextButton")
-local PvPButton = Instance.new("TextButton")
-local TeleportButton = Instance.new("TextButton")
-local FruitButton = Instance.new("TextButton")
-local RaidButton = Instance.new("TextButton")
-local MiscButton = Instance.new("TextButton")
-local ESPButton = Instance.new("TextButton")
-local MinimizeButton = Instance.new("TextButton")
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local remotes = RepStorage:WaitForChild("Remotes")
+local remoteFunction = remotes:FindFirstChild("CommF_")
+local remoteEvent = remotes:FindFirstChild("CommE_")
 
-Gui.Name = "LiL Hub"
-Gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+local autoFarmActive = false
+local autoBountyActive = false
+local addingStats = false
 
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = Gui
-MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 400, 0, 500)
+local window = ui:Window("LilBro Hub")
 
--- Buttons Setup
-FarmButton.Text = "Farm"
-FarmButton.Size = UDim2.new(0, 100, 0, 50)
-FarmButton.Position = UDim2.new(0, 0, 0, 0)
-FarmButton.Parent = MainFrame
+remoteFunction:InvokeServer("Buso")
 
-PvPButton.Text = "PvP"
-PvPButton.Size = UDim2.new(0, 100, 0, 50)
-PvPButton.Position = UDim2.new(0, 0, 0, 60)
-PvPButton.Parent = MainFrame
-
-TeleportButton.Text = "Teleport"
-TeleportButton.Size = UDim2.new(0, 100, 0, 50)
-TeleportButton.Position = UDim2.new(0, 0, 0, 120)
-TeleportButton.Parent = MainFrame
-
-FruitButton.Text = "Fruits"
-FruitButton.Size = UDim2.new(0, 100, 0, 50)
-FruitButton.Position = UDim2.new(0, 0, 0, 180)
-FruitButton.Parent = MainFrame
-
-RaidButton.Text = "Raid"
-RaidButton.Size = UDim2.new(0, 100, 0, 50)
-RaidButton.Position = UDim2.new(0, 0, 0, 240)
-RaidButton.Parent = MainFrame
-
-MiscButton.Text = "Misc"
-MiscButton.Size = UDim2.new(0, 100, 0, 50)
-MiscButton.Position = UDim2.new(0, 0, 0, 300)
-MiscButton.Parent = MainFrame
-
-ESPButton.Text = "ESP"
-ESPButton.Size = UDim2.new(0, 100, 0, 50)
-ESPButton.Position = UDim2.new(0, 0, 0, 360)
-ESPButton.Parent = MainFrame
-
-MinimizeButton.Text = "L"
-MinimizeButton.Size = UDim2.new(0, 50, 0, 50)
-MinimizeButton.Position = UDim2.new(0, 350, 0, 0)
-MinimizeButton.Parent = MainFrame
-
--- Functions for tabs
-local function openFarmTab()
-    -- Farm Functions
+local function findTool(name)
+    return character:FindFirstChild(name) or player.Backpack:FindFirstChild(name)
 end
 
-local function openPvPTab()
-    -- PvP Functions
+local function equipTool(name)
+    local tool = findTool(name)
+    if tool and tool.Parent ~= character then
+        humanoid:EquipTool(tool)
+        task.wait()
+        return findTool(name)
+    elseif tool and tool.Parent == character then
+        return tool
+    end
 end
 
-local function openTeleportTab()
-    -- Teleport Functions
+local function Attack(target)
+    if not target or not target:FindFirstChild("HumanoidRootPart") then return end
+    local tool = equipTool("Dragon-Dragon")
+    local attackRemote = tool and tool:FindFirstChild("LeftClickRemote")
+    local startTime = tick()
+    while (autoFarmActive or autoBountyActive) and target.Parent and target.Humanoid.Health > 0 and humanoid.Health > 0 and tick() - startTime < 10 do
+        rootPart.CFrame = target.HumanoidRootPart.CFrame
+        attackRemote:FireServer(Vector3.new(-0.3, 0, -1), 1)
+        task.wait()
+    end
 end
 
-local function openFruitTab()
-    -- Fruit Functions
+local function AttackMob(name)
+    local tool = equipTool("Dragon-Dragon")
+    if not tool then return end
+    local attackRemote = tool:FindFirstChild("LeftClickRemote")
+    sethiddenproperty(player, "SimulationRadius", math.huge)
+    local startTime = tick()
+    while (autoFarmActive or autoBountyActive) and humanoid.Health > 0 and tick() - startTime < 10 do
+        local enemies = workspace:FindFirstChild("Enemies")
+        if enemies then
+            for _, mob in pairs(enemies:GetChildren()) do
+                if mob.Name == name then
+                    local hrp = mob:FindFirstChild("HumanoidRootPart")
+                    local h = mob:FindFirstChild("Humanoid")
+                    if hrp and h and h.Health > 0 then
+                        hrp.CFrame = rootPart.CFrame * CFrame.new(math.random(0,5), 0, math.random(-5,0))
+                        hrp.CanCollide = false
+                        attackRemote:FireServer(Vector3.new(-0.3, 0, -1), 1)
+                        task.wait()
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
 end
 
-local function openRaidTab()
-    -- Raid Functions
-end
+window:Toggle("Auto Farm (1-700)", false, function(state)
+    autoFarmActive = state
+    if state then
+        remoteFunction:InvokeServer("SwitchFruit", "Dragon-Dragon", "West")
+        rootPart.CFrame = CFrame.new(5313, 44, 4757)
+        task.spawn(function()
+            while autoFarmActive do
+                if player.Data.Level.Value >= 700 then
+                    game:GetService("TeleportService"):Teleport(85997647791174,player)
+                    autoFarmActive = false
+                    break
+                end
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, e in pairs(enemies:GetChildren()) do
+                        if e.Name == "Galley Captain" and e:FindFirstChild("Humanoid") and e.Humanoid.Health > 0 and e:FindFirstChild("HumanoidRootPart") then
+                            AttackMob("Galley Captain")
+                        end
+                    end
+                end
+                task.wait()
+            end
+        end)
 
-local function openMiscTab()
-    -- Misc Functions
-end
-
-local function openESPTab()
-    -- ESP Functions
-end
-
-FarmButton.MouseButton1Click:Connect(openFarmTab)
-PvPButton.MouseButton1Click:Connect(openPvPTab)
-TeleportButton.MouseButton1Click:Connect(openTeleportTab)
-FruitButton.MouseButton1Click:Connect(openFruitTab)
-RaidButton.MouseButton1Click:Connect(openRaidTab)
-MiscButton.MouseButton1Click:Connect(openMiscTab)
-ESPButton.MouseButton1Click:Connect(openESPTab)
-
--- Minimize functionality
-local isMinimized = false
-
-MinimizeButton.MouseButton1Click:Connect(function()
-    if isMinimized then
-        MainFrame.Visible = true
-        isMinimized = false
-    else
-        MainFrame.Visible = false
-        isMinimized = true
+        if not addingStats then
+            addingStats = true
+            task.spawn(function()
+                while autoFarmActive do
+                    remoteFunction:InvokeServer("AddPoint", "Demon Fruit", 9999)
+                    task.wait()
+                end
+                addingStats = false
+            end)
+        end
     end
 end)
 
--- Farm Functions
-local function autoFarm()
-    -- Code for Auto Farm
-end
+window:Toggle("Auto Farm (700-1500)", false, function(state)
+    autoFarmActive = state
+    if state then
+        remoteFunction:InvokeServer("SwitchFruit", "Dragon-Dragon", "West")
+        rootPart.CFrame = CFrame.new(-3174, 299, -10568)
+        task.spawn(function()
+            while autoFarmActive do
+                if player.Data.Level.Value >= 1500 then
+                    autoFarmActive = false
+                    break
+                end
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, e in pairs(enemies:GetChildren()) do
+                        if e.Name == "Water Fighter" and e:FindFirstChild("Humanoid") and e.Humanoid.Health > 0 and e:FindFirstChild("HumanoidRootPart") then
+                            AttackMob("Water Fighter")
+                        end
+                    end
+                end
+                task.wait()
+            end
+        end)
 
-local function autoBounty()
-    -- Code for Auto Bounty
-end
-
-local function autoMission()
-    -- Code to select and auto grab mission based on level
-end
-
--- PvP Functions
-local function autoPvP()
-    -- Code for Auto PvP and Kill Aura
-end
-
--- Teleport Functions
-local function teleportToSea()
-    -- Code to detect sea and teleport accordingly
-end
-
-local function teleportToIsland(islandName)
-    -- Code to teleport to island
-end
-
--- Fruits Functions
-local function autoFruitCollect()
-    -- Code for collecting fruits
-end
-
-local function autoRerollFruit()
-    -- Code to auto reroll fruit
-end
-
-local function autoStoreFruit()
-    -- Code for storing fruits
-end
-
--- Raid Functions
-local function autoRaid()
-    -- Code for Auto Raid
-end
-
--- Misc Functions
-local function toggleRaceV3()
-    -- Code to toggle Race V3
-end
-
-local function toggleRaceV4()
-    -- Code to toggle Race V4
-end
-
-local function changeTeam()
-    -- Code to change team between Pirate and Marine
-end
-
-local function redeemAllCodes()
-    -- Code to redeem all Blox Fruits codes
-end
-
--- Detect current Sea (auto)
-local function detectCurrentSea()
-    -- Code to auto detect the Sea the player is in
-end
-
--- Kill Aura and Attack on proximity
-local function killAura()
-    -- Code for Kill Aura functionality
-end
-
--- Speed settings for flight
-local flightSpeed = 100
-
--- Main function to update status
-while wait(1) do
-    -- Continuously check if the script is active
-    if game:GetService("Players").LocalPlayer.PlayerGui.LiLHub.MainFrame.Visible then
-        -- Run farm, PvP, etc. functionalities based on selected options
+        if not addingStats then
+            addingStats = true
+            task.spawn(function()
+                while autoFarmActive do
+                    remoteFunction:InvokeServer("AddPoint", "Demon Fruit", 1)
+                    task.wait()
+                end
+                addingStats = false
+            end)
+        end
     end
-end
+end)
+
+window:Toggle("Auto Bounty", false, function(state)
+    autoBountyActive = state
+    if state then
+        remoteFunction:InvokeServer("SwitchFruit", "Dragon-Dragon", "West")
+        task.spawn(function()
+            while autoBountyActive do
+                local targetPlayer, minDist = nil, math.huge
+                for _, pl in ipairs(Players:GetPlayers()) do
+                    if pl ~= player and pl.Character and pl.Character:FindFirstChild("Humanoid") and pl.Character.Humanoid.Health > 0 and pl.Character:FindFirstChild("HumanoidRootPart") then
+                        local d = (rootPart.Position - pl.Character.HumanoidRootPart.Position).Magnitude
+                        if d < minDist then
+                            minDist, targetPlayer = d, pl
+                        end
+                    end
+                end
+                if targetPlayer and targetPlayer.Character then
+                    Attack(targetPlayer.Character)
+                else
+                    task.wait()
+                end
+                task.wait()
+            end
+        end)
+    end
+end)
+
+window:Toggle("Modo Leve", false, function(state)
+    if state then
+        game:GetService("Lighting").GlobalShadows = false
+        game:GetService("Lighting").FogEnd = 100000
+        game:GetService("Lighting").Brightness = 1
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") then
+                v.Enabled = false
+            elseif v:IsA("Decal") then
+                v.Transparency = 1
+            end
+        end
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    else
+        game:GetService("Lighting").GlobalShadows = true
+        game:GetService("Lighting").FogEnd = 1000
+        game:GetService("Lighting").Brightness = 2
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+    end
+end)
+
+window:Label("By : LilBro", Color3.fromRGB(255, 0, 0))
